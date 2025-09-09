@@ -265,6 +265,7 @@ void Controller::track(const ros::Time& time)
   {
     ROS_WARN("%s", ex.what());
   }
+  //目标装甲板当前时间的偏航角度位置（原本的位置加上时间内转过的偏转角）
   double yaw = data_track_.yaw + data_track_.v_yaw * ((time - data_track_.header.stamp).toSec());
   while (yaw > M_PI)
     yaw -= 2 * M_PI;
@@ -507,6 +508,10 @@ void Controller::moveJoint(const ros::Time& time, const ros::Duration& period)
   // publish state
   if (loop_count_ % 10 == 0)
   {
+    //pos_state_pub是一个存放着
+    //std::unique_ptr<realtime_tools::RealtimePublisher<rm_msgs::GimbalPosState>>
+    //这种消息类型的容器
+    //使用pub遍历，更新所有的状态
     for (const auto& pub : pos_state_pub_)
     {
       if (pub.second && pub.second->trylock())
@@ -603,6 +608,8 @@ void Controller::commandCB(const rm_msgs::GimbalCmdConstPtr& msg)
 
 void Controller::trackCB(const rm_msgs::TrackDataConstPtr& msg)
 {
+
+  //检查id字段是否为0，可以过滤无效信息
   if (msg->id == 0)
     return;
   track_rt_buffer_.writeFromNonRT(*msg);

@@ -173,6 +173,8 @@ private:
   ros::Subscriber cmd_gimbal_sub_;
   ros::Subscriber data_track_sub_;
   realtime_tools::RealtimeBuffer<rm_msgs::GimbalCmd> cmd_rt_buffer_;
+  //realtime_tools::RealtimeBuffer是一个实时缓冲区类，通常用于实时系统中处理数据
+  //实时性缓冲区变量 track_rt_buffer_,存放rm_msgs::TrackDate类型的数据
   realtime_tools::RealtimeBuffer<rm_msgs::TrackData> track_rt_buffer_;
 
   rm_msgs::GimbalCmd cmd_gimbal_;
