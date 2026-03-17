@@ -414,6 +414,11 @@ bool BulletSolver::solve(geometry_msgs::Point pos, geometry_msgs::Vector3 vel, d
   {
     traject_output_yaw_ = output_yaw_;
   }
+
+  if (!track_target_)
+  {
+    traject_output_yaw_ = output_yaw_;
+  }
   if (bullet_solver_pub->trylock())
   {
     bullet_solver_pub->msg_.selected_armor_ = selected_armor_;

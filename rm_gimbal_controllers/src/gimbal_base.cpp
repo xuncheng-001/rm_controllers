@@ -540,7 +540,7 @@ void Controller::moveJoint(const ros::Time& time, const ros::Duration& period)
     }
     if (state_ == TRACK)
     {
-      if (bullet_solver_->getUsingtraject())
+      if (bullet_solver_->getUsingtraject() && bullet_solver_->getTrackTarget())
       {
         ctrls_.at(2)->setCommand(pid_pos_.at(2)->getCurrentCmd() -
                                  updateCompensation(chassis_vel_->angular_->z()) * chassis_vel_->angular_->z() +
