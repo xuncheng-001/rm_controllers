@@ -57,10 +57,10 @@ namespace rm_gimbal_controllers
 {
 struct Config
 {
-  double resistance_coff_qd_10, resistance_coff_qd_15, resistance_coff_qd_16, resistance_coff_qd_18,
-      resistance_coff_qd_30, g, delay, center_delay, max_switch_angle, switch_angle_offset, switch_duration_scale,
-      switch_duration_rate, switch_duration_offset, min_shoot_beforehand_vel, track_rotate_target_delay,
-      track_move_target_delay;
+  double resistance_coff_qd_1, resistance_coff_qd_10, resistance_coff_qd_15, resistance_coff_qd_16,
+      resistance_coff_qd_18, resistance_coff_qd_30, resistance_coff_qd_800, g, delay, center_delay, max_switch_angle,
+      switch_angle_offset, switch_duration_scale, switch_duration_rate, switch_duration_offset,
+      min_shoot_beforehand_vel, track_rotate_target_delay, track_move_target_delay;
   int min_fit_switch_count;
   int max_selected_armor_;
   double traject_ahead_;
@@ -85,7 +85,7 @@ public:
              double r1, double r2, double dz, int armors_num, double start_vel);
   double getGimbalError(geometry_msgs::Point pos, geometry_msgs::Vector3 vel, double yaw, double v_yaw, double r1,
                         double r2, double dz, int armors_num, double yaw_real, double pitch_real, double bullet_speed);
-  double getResistanceCoefficient(double bullet_speed) const;
+  double getResistanceCoefficient(double target_distance) const;
   double getYaw() const
   {
     return output_yaw_;
@@ -153,6 +153,7 @@ private:
   double traject_switch_time_{};
   double switche_time_yaw_{};
   double traject_max_acc_{};
+  double last_output_yaw_{};
   int shoot_num_ = 0;
   int shoot_beforehand_cmd_{};
   int count_;
@@ -177,6 +178,8 @@ private:
   visualization_msgs::Marker marker_real_;
   ros::Time start_using_traject_time;
   ros::Time ban_shoot_time_;
+  ros::Time last_output_time_;
+  ros::Time ban_shoot_start_time_;
 
   TrajectoryFunctionCoefficients trajectory_function_coefficients;
   TrajectoryLimitParams stauts_limit_;

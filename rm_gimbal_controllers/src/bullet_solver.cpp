@@ -51,6 +51,7 @@ BulletSolver::BulletSolver(ros::NodeHandle& controller_nh)
     .resistance_coff_qd_16 = getParam(controller_nh, "resistance_coff_qd_16", 0.),
     .resistance_coff_qd_18 = getParam(controller_nh, "resistance_coff_qd_18", 0.),
     .resistance_coff_qd_30 = getParam(controller_nh, "resistance_coff_qd_30", 0.),
+    .resistance_coff_qd_800 = getParam(controller_nh, "resistance_coff_qd_800", 1.1),
     .g = getParam(controller_nh, "g", 0.),
     .delay = getParam(controller_nh, "delay", 0.),
     .center_delay = getParam(controller_nh, "center_delay", 0.0),
@@ -108,20 +109,30 @@ BulletSolver::BulletSolver(ros::NodeHandle& controller_nh)
                                                                       &BulletSolver::heatCB, this);
 }
 
-double BulletSolver::getResistanceCoefficient(double bullet_speed) const
+double BulletSolver::getResistanceCoefficient(double target_distance) const
 {
   // bullet_speed have 5 value:10,15,16,18,30
   double resistance_coff;
-  if (bullet_speed < 12.5)
-    resistance_coff = config_.resistance_coff_qd_10;
-  else if (bullet_speed < 15.5)
-    resistance_coff = config_.resistance_coff_qd_15;
-  else if (bullet_speed < 17)
-    resistance_coff = config_.resistance_coff_qd_16;
-  else if (bullet_speed < 24)
-    resistance_coff = config_.resistance_coff_qd_18;
+  if (target_distance < 3.3)
+    resistance_coff = config_.resistance_coff_qd_1 + (target_distance - 2.3) +
+                      (config_.resistance_coff_qd_10 - config_.resistance_coff_qd_1);
+  else if (target_distance < 4.3 && target_distance > 3.3)
+    resistance_coff = config_.resistance_coff_qd_10 +
+                      (target_distance - 3.3) * (config_.resistance_coff_qd_15 - config_.resistance_coff_qd_10);
+  else if (target_distance < 5.3)
+    resistance_coff = config_.resistance_coff_qd_15 +
+                      (target_distance - 4.3) * (config_.resistance_coff_qd_16 - config_.resistance_coff_qd_15);
+  else if (target_distance < 6.3)
+    resistance_coff = config_.resistance_coff_qd_16 +
+                      (target_distance - 5.3) * (config_.resistance_coff_qd_18 - config_.resistance_coff_qd_16);
+  else if (target_distance < 7.3)
+    resistance_coff = config_.resistance_coff_qd_18 +
+                      (target_distance - 6.3) * (config_.resistance_coff_qd_30 - config_.resistance_coff_qd_18);
+  else if (target_distance < 8.3)
+    resistance_coff = config_.resistance_coff_qd_30 +
+                      (target_distance - 7.3) * (config_.resistance_coff_qd_800 - config_.resistance_coff_qd_30);
   else
-    resistance_coff = config_.resistance_coff_qd_30;
+    resistance_coff = config_.resistance_coff_qd_800;
   return resistance_coff;
 }
 
@@ -130,7 +141,7 @@ bool BulletSolver::solve(geometry_msgs::Point pos, geometry_msgs::Vector3 vel, d
 {
   config_ = *config_rt_buffer_.readFromRT();
   bullet_speed_ = bullet_speed;
-  resistance_coff_ = getResistanceCoefficient(bullet_speed_) != 0 ? getResistanceCoefficient(bullet_speed_) : 0.001;
+  // resistance_coff_ = getResistanceCoefficient(bullet_speed_) != 0 ? getResistanceCoefficient(bullet_speed_) : 0.001;
   if (abs(yaw - last_yaw_) > 1.)
     filtered_yaw_ = yaw;
   else if (last_yaw_ != yaw)
@@ -141,6 +152,7 @@ bool BulletSolver::solve(geometry_msgs::Point pos, geometry_msgs::Vector3 vel, d
   filtered_v_yaw_ = filtered_v_yaw_ + (v_yaw - filtered_v_yaw_) * 0.05;
   double temp_z = pos.z;
   double target_rho = std::sqrt(std::pow(pos.x, 2) + std::pow(pos.y, 2));
+  resistance_coff_ = getResistanceCoefficient(target_rho) != 0 ? getResistanceCoefficient(target_rho) : 0.001;
   double output_yaw_central = std::atan2(pos.y, pos.x);
   output_pitch_ = std::atan2(temp_z, std::sqrt(std::pow(pos.x, 2) + std::pow(pos.y, 2)));
   double rough_fly_time =
@@ -165,8 +177,8 @@ bool BulletSolver::solve(geometry_msgs::Point pos, geometry_msgs::Vector3 vel, d
   double move_switch_time_coff_ =
       v_yaw * vel.x > 0.0 ? config_.move_switch_time_coff_ : -config_.move_switch_time_coff_;
   double move_switch_time_offset = move_switch_time_coff_ * vel.x;
-  traject_switch_time_ =
-      1.321 * exp(-0.289 * abs(filtered_v_yaw_ + 1.0)) * config_.traject_ahead_ + move_switch_time_offset;
+  traject_switch_time_ = 1.1399 * std::pow(v_yaw, -0.9126) * config_.traject_ahead_ + move_switch_time_offset;
+  // 1.1399 * std::pow(v_yaw, -0.9126) * config_.traject_ahead_ * (1 + (target_rho - 2.0) * 0.05) + move_switch_time_offset ;
   // traject_switch_time_ = (switch_armor_angle - config_.traject_ahead_ - switche_time_yaw_) / filtered_v_yaw_;
   yaw_subtract_ = filtered_yaw_ - output_yaw_central;
   while (yaw_subtract_ > M_PI)
@@ -184,6 +196,7 @@ bool BulletSolver::solve(geometry_msgs::Point pos, geometry_msgs::Vector3 vel, d
   {
     selected_armor_ = 0;
   }
+  selected_armor_ = 0;
 
   if ((after_fly_yaw_subtract_ > switch_armor_angle && filtered_v_yaw_ > 1.) ||
       (after_fly_yaw_subtract_ < switch_armor_angle && filtered_v_yaw_ < -1.))
@@ -266,22 +279,22 @@ bool BulletSolver::solve(geometry_msgs::Point pos, geometry_msgs::Vector3 vel, d
   {
     target_pos_.x = pos.x - r * cos(atan2(pos.y, pos.x));
     target_pos_.y = pos.y - r * sin(atan2(pos.y, pos.x));
-    if ((filtered_v_yaw_ > 1.0 && (yaw_subtract_ + filtered_v_yaw_ * (fly_time_ + config_.center_delay)) > 0.5) ||
-        (filtered_v_yaw_ < -1.0 && (yaw_subtract_ + filtered_v_yaw_ * (fly_time_ + config_.center_delay)) < -0.5))
+    if ((filtered_v_yaw_ > 1.0 && (yaw_subtract_ + filtered_v_yaw_ * (fly_time_ + config_.center_delay)) > 0.7) ||
+        (filtered_v_yaw_ < -1.0 && (yaw_subtract_ + filtered_v_yaw_ * (fly_time_ + config_.center_delay)) < -0.7))
     {
       selected_armor_ = filtered_v_yaw_ > 0. ? -1 : 1;
     }
     if (((filtered_v_yaw_ > 1.0 &&
-          (yaw_subtract_ + filtered_v_yaw_ * (fly_time_ + config_.center_delay) - 1 * 2 * M_PI / armors_num) > 0.5) ||
+          (yaw_subtract_ + filtered_v_yaw_ * (fly_time_ + config_.center_delay) - 1 * 2 * M_PI / armors_num) > 0.7) ||
          (filtered_v_yaw_ < -1.0 &&
-          (yaw_subtract_ + filtered_v_yaw_ * (fly_time_ + config_.center_delay) + 1 * 2 * M_PI / armors_num) < -0.5)))
+          (yaw_subtract_ + filtered_v_yaw_ * (fly_time_ + config_.center_delay) + 1 * 2 * M_PI / armors_num) < -0.7)))
     {
       selected_armor_ = filtered_v_yaw_ > 0. ? -2 : 2;
     }
     if (((filtered_v_yaw_ > 1.0 &&
-          (yaw_subtract_ + filtered_v_yaw_ * (fly_time_ + config_.center_delay) - 2 * 2 * M_PI / armors_num) > 0.5) ||
+          (yaw_subtract_ + filtered_v_yaw_ * (fly_time_ + config_.center_delay) - 2 * 2 * M_PI / armors_num) > 0.7) ||
          (filtered_v_yaw_ < -1.0 &&
-          (yaw_subtract_ + filtered_v_yaw_ * (fly_time_ + config_.center_delay) + 2 * 2 * M_PI / armors_num) < -0.5)))
+          (yaw_subtract_ + filtered_v_yaw_ * (fly_time_ + config_.center_delay) + 2 * 2 * M_PI / armors_num) < -0.7)))
     {
       selected_armor_ = filtered_v_yaw_ > 0. ? -3 : 3;
     }
@@ -331,7 +344,8 @@ bool BulletSolver::solve(geometry_msgs::Point pos, geometry_msgs::Vector3 vel, d
           r_trajcet_ * sin(yaw + v_yaw * (fly_time_ + switchtime) + (selected_armor_ + 1) * 2 * M_PI / armors_num);
     }
     stauts_limit_.start_pos = output_yaw_;
-    stauts_limit_.start_vel = start_vel;
+    stauts_limit_.start_vel = (output_yaw_ - last_output_yaw_) / (ros::Time::now().toSec() - last_output_time_.toSec());
+    ;
     stauts_limit_.end_pos =
         std::atan2(after_traject_output_yaw_.y, after_traject_output_yaw_.x) + config_.end_pos_offset;
     stauts_limit_.end_vel = stauts_limit_.start_vel;
@@ -426,9 +440,11 @@ bool BulletSolver::solve(geometry_msgs::Point pos, geometry_msgs::Vector3 vel, d
     bullet_solver_pub->msg_.output_yaw_central = output_yaw_central;
     bullet_solver_pub->msg_.after_fly_yaw_subtract_ = after_fly_yaw_subtract_;
     bullet_solver_pub->msg_.switch_armor_angle = switch_armor_angle;
-    bullet_solver_pub->msg_.test_number = switch_armor_time_.toSec();
+    bullet_solver_pub->msg_.test_number = ban_shoot_start_time_.toSec();
     bullet_solver_pub->msg_.switche_time_yaw_ = switche_time_yaw_;
     bullet_solver_pub->msg_.traject_acc_ = traject_max_acc_;
+    bullet_solver_pub->msg_.pos_x = pos.x;
+    bullet_solver_pub->msg_.pos_y = pos.y;
     if (v_yaw > 1.0)
     {
       bullet_solver_pub->msg_.center_this_armor_ =
@@ -454,6 +470,8 @@ bool BulletSolver::solve(geometry_msgs::Point pos, geometry_msgs::Vector3 vel, d
     bullet_solver_pub->unlockAndPublish();
   }
   last_selected_armor_ = selected_armor_;
+  last_output_time_ = ros::Time::now();
+  last_output_yaw_ = output_yaw_;
   return true;
 }
 void BulletSolver::getSelectedArmorPosAndVel(geometry_msgs::Point& armor_pos, geometry_msgs::Vector3& armor_vel,
@@ -613,16 +631,27 @@ void BulletSolver::judgeShootBeforehand(const ros::Time& time, double v_yaw)
     shoot_beforehand_cmd_ = rm_msgs::ShootBeforehandCmd::JUDGE_BY_ERROR;
   else if (std::abs(v_yaw) > config_.min_shoot_beforehand_vel)
   {
-    if ((ros::Time::now().toSec() > (switch_armor_time_.toSec() + traject_switch_time_ - config_.delay)) &&
+    if ((ros::Time::now().toSec() >= (switch_armor_time_.toSec() + traject_switch_time_ - config_.delay)) &&
         (ros::Time::now().toSec() < (switch_armor_time_.toSec() + traject_switch_time_ - config_.delay) + switchtime))
+    {
+      ban_shoot_count_++;
       shoot_beforehand_cmd_ = rm_msgs::ShootBeforehandCmd::BAN_SHOOT;
-    else if (ros::Time::now().toSec() >
-                 (switch_armor_time_.toSec() + traject_switch_time_ - config_.delay) + switchtime &&
-             ros::Time::now().toSec() <
-                 (switch_armor_time_.toSec() + traject_switch_time_ - config_.delay) + switchtime + config_.delay)
+      if (ban_shoot_count_ == 3)
+      {
+        ban_shoot_start_time_ = ros::Time::now();
+      }
+    }
+    else if (ros::Time::now().toSec() > ban_shoot_start_time_.toSec() + switchtime &&
+             ros::Time::now().toSec() < ban_shoot_start_time_.toSec() + switchtime + config_.delay)
+    {
       shoot_beforehand_cmd_ = rm_msgs::ShootBeforehandCmd::ALLOW_SHOOT;
+      ban_shoot_count_ = 0;
+    }
     else
+    {
       shoot_beforehand_cmd_ = rm_msgs::ShootBeforehandCmd::JUDGE_BY_ERROR;
+      ban_shoot_count_ = 0;
+    }
   }
   else
     shoot_beforehand_cmd_ = rm_msgs::ShootBeforehandCmd::JUDGE_BY_ERROR;
@@ -695,6 +724,7 @@ void BulletSolver::reconfigCB(rm_gimbal_controllers::BulletSolverConfig& config,
                         .resistance_coff_qd_16 = config.resistance_coff_qd_16,
                         .resistance_coff_qd_18 = config.resistance_coff_qd_18,
                         .resistance_coff_qd_30 = config.resistance_coff_qd_30,
+                        .resistance_coff_qd_800 = config.resistance_coff_qd_800,
                         .g = config.g,
                         .delay = config.delay,
                         .center_delay = config.center_delay,
