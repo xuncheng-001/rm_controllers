@@ -162,6 +162,7 @@ private:
   int ban_shoot_count_ = 0;
   int selected_armor_ = 0;
   int last_selected_armor_ = 0;
+  int vision_count_ = 0;
 
   bool track_target_ = true;
   bool identified_target_change_ = true;
@@ -171,6 +172,8 @@ private:
   bool using_traject_{};
   bool last_shoot_state_{};
   bool is_aheading_two_{};
+  bool real_change_armor_ = false;
+  bool Advanced_planning_ = false;
 
   geometry_msgs::Point after_traject_output_yaw_{};
   geometry_msgs::Point target_pos_{};
