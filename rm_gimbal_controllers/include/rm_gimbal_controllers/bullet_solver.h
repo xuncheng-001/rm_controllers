@@ -173,7 +173,7 @@ private:
   bool last_shoot_state_{};
   bool is_aheading_two_{};
   bool real_change_armor_ = false;
-  bool Advanced_planning_ = false;
+  bool Advanced_planning_ = true;
 
   geometry_msgs::Point after_traject_output_yaw_{};
   geometry_msgs::Point target_pos_{};
