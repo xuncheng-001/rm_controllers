@@ -60,12 +60,13 @@ struct Config
   double resistance_coff_qd_1, resistance_coff_qd_10, resistance_coff_qd_15, resistance_coff_qd_16,
       resistance_coff_qd_18, resistance_coff_qd_30, resistance_coff_qd_800, g, delay, center_delay, max_switch_angle,
       switch_angle_offset, switch_duration_scale, switch_duration_rate, switch_duration_offset,
-      min_shoot_beforehand_vel, track_rotate_target_delay, track_move_target_delay;
+      min_shoot_beforehand_vel, track_rotate_target_delay, track_move_target_delay, yaw_max_acc;
   int min_fit_switch_count;
   int max_selected_armor_;
   double traject_ahead_;
   int clean_shoot_num_;
   double end_pos_offset, move_switch_time_coff_;
+  double traject_k_effort, traject_k_vel_;
 };
 struct TrajectoryFunctionCoefficients
 {
@@ -98,6 +99,10 @@ public:
   {
     return traject_output_yaw_;
   }
+  double getTrajectVel() const
+  {
+    return traject_vel_;
+  }
   bool getUsingtraject() const
   {
     return using_traject_;
@@ -122,7 +127,7 @@ public:
   void bulletModelPub(const geometry_msgs::TransformStamped& odom2pitch, const ros::Time& time);
   void identifiedTargetChangeCB(const std_msgs::BoolConstPtr& msg);
   void reconfigCB(rm_gimbal_controllers::BulletSolverConfig& config, uint32_t);
-  double planningPoint(ros::Time& time, ros::Time& start_trajectory_time_);
+  double planningPoint(ros::Time& time, ros::Time& start_trajectory_time_, double v_yaw);
   void heatCB(const rm_msgs::LocalHeatStateConstPtr& msg);
   ~BulletSolver() = default;
 
@@ -154,6 +159,7 @@ private:
   double switche_time_yaw_{};
   double traject_max_acc_{};
   double last_output_yaw_{};
+  double traject_vel_{};
   int shoot_num_ = 0;
   int shoot_beforehand_cmd_{};
   int count_;
@@ -174,6 +180,7 @@ private:
   bool is_aheading_two_{};
   bool real_change_armor_ = false;
   bool Advanced_planning_ = true;
+  bool need_solve_traject_ = false;
 
   geometry_msgs::Point after_traject_output_yaw_{};
   geometry_msgs::Point target_pos_{};

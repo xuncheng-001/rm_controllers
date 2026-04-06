@@ -109,7 +109,9 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw, ros::NodeHandle& ro
         axis = (joint_urdf->axis.x == 1) * 0 + (joint_urdf->axis.y == 1) * 1 + (joint_urdf->axis.z == 1) * 2;
         joint_urdfs_.insert(std::make_pair(axis, joint_urdf));
       }
-
+      double r = getParam(nh, "r", 999.);
+      tracking_differentiator_.insert(
+          std::make_pair(axis, std::make_unique<NonlinearTrackingDifferentiator<double>>(r, 0.001)));
       ctrls_.insert(std::make_pair(axis, std::make_unique<effort_controllers::JointVelocityController>()));
       pid_pos_.insert(std::make_pair(axis, std::make_unique<control_toolbox::Pid>()));
       pos_des_in_limit_.insert(std::make_pair(axis, true));
@@ -134,6 +136,10 @@ bool Controller::init(hardware_interface::RobotHW* robot_hw, ros::NodeHandle& ro
   else
   {
     ROS_INFO("Param imu_name has not set, use motors' data instead of imu.");
+  }
+  if (has_imu_)
+  {
+    ROS_WARN_ONCE("has imu");
   }
 
   gimbal_des_frame_id_ = getGimbalFrameID(joint_urdfs_) + "_des";
@@ -499,6 +505,10 @@ void Controller::moveJoint(const ros::Time& time, const ros::Duration& period)
         tf2::fromMsg(target_vel, target_vel_tf);
         vel_des[2] = target_pos_tf.cross(target_vel_tf).z() / std::pow((target_pos_tf.length()), 2);
       }
+      if (bullet_solver_->getUsingtraject() && bullet_solver_->getTrackTarget())
+      {
+        vel_des[2] = bullet_solver_->getTrajectVel();
+      }
       if (joint_urdfs_.find(1) != joint_urdfs_.end())
       {
         transform = robot_state_handle_.lookupTransform(joint_urdfs_.at(1)->parent_link_name,
@@ -520,6 +530,15 @@ void Controller::moveJoint(const ros::Time& time, const ros::Duration& period)
     if (!in_limit.second)
       vel_des[in_limit.first] = 0.;
 
+  // for (auto& td : tracking_differentiator_)
+  // {
+  //   td.second->update(last_pos_des_[td.first] +
+  //                         angles::shortest_angular_distance(last_pos_des_[td.first], pos_des[td.first]),
+  //                     vel_des[td.first],0.5);
+  //   last_pos_des_[td.first] += angles::shortest_angular_distance(last_pos_des_[td.first], pos_des[td.first]);
+  //   pos_des_temp[td.first] = std::remainder(td.second->getX1(), 2 * M_PI);
+  //   angle_error[td.first] = angles::shortest_angular_distance(pos_real[td.first], pos_des_temp[td.first]);
+  // }
   if (pid_pos_.find(1) != pid_pos_.end() && ctrls_.find(1) != ctrls_.end())
   {
     pid_pos_.at(1)->computeCommand(angle_error[1], period);
@@ -544,8 +563,10 @@ void Controller::moveJoint(const ros::Time& time, const ros::Duration& period)
       {
         ctrls_.at(2)->setCommand(pid_pos_.at(2)->getCurrentCmd() -
                                  updateCompensation(chassis_vel_->angular_->z()) * chassis_vel_->angular_->z() +
-                                 config_.yaw_k_v_ * vel_des[2] + ctrls_.at(2)->joint_.getVelocity() - angular_vel.z +
-                                 bullet_solver_->getTrajectEffortff());
+                                 config_.yaw_k_v_ * vel_des[2] + ctrls_.at(2)->joint_.getVelocity() - angular_vel.z);
+        auto cmd = ctrls_.at(2)->joint_.getCommand();
+        cmd += bullet_solver_->getTrajectEffortff();
+        ctrls_.at(2)->joint_.setCommand(cmd);
       }
       else
       {

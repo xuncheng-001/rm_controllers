@@ -56,6 +56,7 @@
 #include <dynamic_reconfigure/server.h>
 #include <realtime_tools/realtime_publisher.h>
 #include <unordered_map>
+#include <rm_common/traj_gen.h>
 
 namespace rm_gimbal_controllers
 {
@@ -162,6 +163,8 @@ private:
   std::unordered_map<int, std::unique_ptr<control_toolbox::Pid>> pid_pos_;
   std::unordered_map<int, urdf::JointConstSharedPtr> joint_urdfs_;
   std::unordered_map<int, bool> pos_des_in_limit_;
+  std::unordered_map<int, std::unique_ptr<NonlinearTrackingDifferentiator<double>>> tracking_differentiator_;
+  std::unordered_map<int, double> last_pos_des_;
   bool has_imu_ = true;
 
   std::shared_ptr<BulletSolver> bullet_solver_;
@@ -213,7 +216,7 @@ private:
   ros::Time time_;
   double pos_real[3]{ 0. };
   double pos_des[3]{ 0. }, vel_des[3]{ 0. }, angle_error[3]{ 0. }, traject_pos_des[3]{ 0. },
-      traject_angle_error[3]{ 0. };
+      traject_angle_error[3]{ 0. }, pos_des_temp[3]{ 0. };
   double last_acc_yaw = 0;
 };
 
