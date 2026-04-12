@@ -57,6 +57,7 @@
 #include <realtime_tools/realtime_publisher.h>
 #include <unordered_map>
 #include <rm_common/traj_gen.h>
+#include <rm_gimbal_controllers/mpc_trajectory_planning.h>
 
 namespace rm_gimbal_controllers
 {
@@ -168,6 +169,10 @@ private:
   bool has_imu_ = true;
 
   std::shared_ptr<BulletSolver> bullet_solver_;
+  std::vector<std::shared_ptr<BulletSolver>> bullet_solver_MPC_;
+  std::vector<bool> bullet_solver_MPC_solve_success_;
+  Eigen::VectorXd bullet_pos_des = Eigen::VectorXd::Zero(201);
+  std::shared_ptr<MPC_Trajectory_Planning> mpc_trajectory_planning_;
 
   // ROS Interface
   ros::Time last_publish_time_{};

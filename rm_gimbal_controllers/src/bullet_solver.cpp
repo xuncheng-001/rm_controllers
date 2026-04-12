@@ -140,7 +140,7 @@ double BulletSolver::getResistanceCoefficient(double target_distance) const
 }
 
 bool BulletSolver::solve(geometry_msgs::Point pos, geometry_msgs::Vector3 vel, double bullet_speed, double yaw,
-                         double v_yaw, double r1, double r2, double dz, int armors_num, double start_vel)
+                         double v_yaw, double r1, double r2, double dz, int armors_num, double start_vel, double next_n)
 {
   config_ = *config_rt_buffer_.readFromRT();
   bullet_speed_ = bullet_speed;
@@ -163,9 +163,9 @@ bool BulletSolver::solve(geometry_msgs::Point pos, geometry_msgs::Vector3 vel, d
   double r = r1;
   double z = pos.z;
   if (track_target_)
-    yaw += filtered_v_yaw_ * config_.track_rotate_target_delay;
-  pos.x += vel.x * config_.track_move_target_delay;
-  pos.y += vel.y * config_.track_move_target_delay;
+    yaw += filtered_v_yaw_ * (config_.track_rotate_target_delay + next_n);
+  pos.x += vel.x * (config_.track_move_target_delay + next_n);
+  pos.y += vel.y * (config_.track_move_target_delay + next_n);
   if (track_target_)
   {
     if (std::abs(filtered_v_yaw_) >= max_track_target_vel_ + switch_hysteresis_)
@@ -198,15 +198,15 @@ bool BulletSolver::solve(geometry_msgs::Point pos, geometry_msgs::Vector3 vel, d
     next_count_ = 0;
     change_armor = false;
   }
-  if ((after_fly_yaw_subtract_ > switch_armor_angle && filtered_v_yaw_ > 3.) ||
-      (after_fly_yaw_subtract_ < -switch_armor_angle && filtered_v_yaw_ < -3.))
+  if ((after_fly_yaw_subtract_ > switch_armor_angle && filtered_v_yaw_ > 2.) ||
+      (after_fly_yaw_subtract_ < -switch_armor_angle && filtered_v_yaw_ < -2.))
   {
     count_++;
     if (count_ >= config_.min_fit_switch_count)
     {
       selected_armor_ = v_yaw > 0. ? -1 : 1;
       r = armors_num == 4 ? r2 : r1;
-      z = armors_num == 4 ? pos.z + dz : pos.z;
+      z = pos.z + dz;
       if ((after_fly_yaw_subtract_ - 2 * M_PI / armors_num > switch_armor_angle) && v_yaw > 0.)
       {
         selected_armor_ = -2;
@@ -594,7 +594,7 @@ double BulletSolver::getGimbalError(geometry_msgs::Point pos, geometry_msgs::Vec
   else
   {
     r = armors_num == 4 ? r2 : r1;
-    z = armors_num == 4 ? pos.z + dz : pos.z;
+    z = pos.z + dz;
   }
   double error;
   if (track_target_)
