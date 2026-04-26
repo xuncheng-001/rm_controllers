@@ -312,7 +312,7 @@ void Controller::track(const ros::Time& time)
   target_vel.z -= chassis_vel_->linear_->z();
   bool solve_success = bullet_solver_->solve(target_pos, target_vel, cmd_gimbal_.bullet_speed, yaw, data_track_.v_yaw,
                                              data_track_.radius_1, data_track_.radius_2, data_track_.dz,
-                                             data_track_.armors_num, ctrls_.at(2)->joint_.getVelocity());
+                                             data_track_.armors_num, gimbal_real_z_vel_);
   bullet_solver_->judgeShootBeforehand(time, data_track_.v_yaw);
 
   if (publish_rate_ > 0.0 && last_publish_time_ + ros::Duration(1.0 / publish_rate_) < time)
@@ -456,6 +456,7 @@ void Controller::moveJoint(const ros::Time& time, const ros::Duration& period)
     if (ctrls_.find(2) != ctrls_.end())
       angular_vel.z = ctrls_.at(2)->joint_.getVelocity();
   }
+  gimbal_real_z_vel_ = angular_vel.z;
   quatToRPY(odom2gimbal_des_.transform.rotation, pos_des[0], pos_des[1], pos_des[2]);
   quatToRPY(odom2gimbal_.transform.rotation, pos_real[0], pos_real[1], pos_real[2]);
   quatToRPY(odom2gimbal_traject_des_.transform.rotation, traject_pos_des[0], traject_pos_des[1], traject_pos_des[2]);
@@ -549,7 +550,7 @@ void Controller::moveJoint(const ros::Time& time, const ros::Duration& period)
   }
   if (pid_pos_.find(2) != pid_pos_.end() && ctrls_.find(2) != ctrls_.end())
   {
-    if (bullet_solver_->getUsingtraject())
+    if (state_ == TRACK)
     {
       pid_pos_.at(2)->computeCommand(traject_angle_error[2], period);
     }
@@ -564,9 +565,6 @@ void Controller::moveJoint(const ros::Time& time, const ros::Duration& period)
         ctrls_.at(2)->setCommand(pid_pos_.at(2)->getCurrentCmd() -
                                  updateCompensation(chassis_vel_->angular_->z()) * chassis_vel_->angular_->z() +
                                  config_.yaw_k_v_ * vel_des[2] + ctrls_.at(2)->joint_.getVelocity() - angular_vel.z);
-        auto cmd = ctrls_.at(2)->joint_.getCommand();
-        cmd += bullet_solver_->getTrajectEffortff();
-        ctrls_.at(2)->joint_.setCommand(cmd);
       }
       else
       {
