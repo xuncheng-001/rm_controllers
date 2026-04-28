@@ -60,7 +60,7 @@ struct Config
   double resistance_coff_qd_1, resistance_coff_qd_10, resistance_coff_qd_15, resistance_coff_qd_16,
       resistance_coff_qd_18, resistance_coff_qd_30, resistance_coff_qd_800, g, delay, center_delay, max_switch_angle,
       switch_angle_offset, min_shoot_beforehand_vel, track_rotate_target_delay, track_move_target_delay, yaw_max_acc;
-  int min_fit_switch_count;
+  int min_fit_switch_count, traject_start_fit_;
   double traject_ahead_;
   int clean_shoot_num_;
   double end_pos_offset;

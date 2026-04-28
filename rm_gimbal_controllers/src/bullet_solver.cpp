@@ -63,6 +63,7 @@ BulletSolver::BulletSolver(ros::NodeHandle& controller_nh)
     .track_move_target_delay = getParam(controller_nh, "track_move_target_delay", 0.),
     .yaw_max_acc = getParam(controller_nh, "yaw_max_acc", 60.),
     .min_fit_switch_count = getParam(controller_nh, "min_fit_switch_count", 3),
+    .traject_start_fit_ = getParam(controller_nh, "traject_start_fit_", 45),
     .traject_ahead_ = getParam(controller_nh, "traject_ahead_", 1.),
     .clean_shoot_num_ = getParam(controller_nh, "clean_shoot_num_", 1),
     .end_pos_offset = getParam(controller_nh, "end_pos_offset", 0.),
@@ -246,22 +247,22 @@ bool BulletSolver::solve(geometry_msgs::Point pos, geometry_msgs::Vector3 vel, d
     {
       target_pos_[i].x = pos_x[i] - r * cos(atan2(pos_y[i], pos_x[i]));
       target_pos_[i].y = pos_y[i] - r * sin(atan2(pos_y[i], pos_x[i]));
-      if ((filtered_v_yaw_ > 4.0 && (yaw_subtract_ + filtered_v_yaw_ * (fly_time_[i] + config_.center_delay)) > 1.1) ||
-          (filtered_v_yaw_ < -4.0 && (yaw_subtract_ + filtered_v_yaw_ * (fly_time_[i] + config_.center_delay)) < -1.1))
+      if ((filtered_v_yaw_ > 4.0 && (yaw_subtract_ + filtered_v_yaw_ * (fly_time_[i] + config_.center_delay)) > 0.7) ||
+          (filtered_v_yaw_ < -4.0 && (yaw_subtract_ + filtered_v_yaw_ * (fly_time_[i] + config_.center_delay)) < -0.7))
       {
         selected_armor_[i] = filtered_v_yaw_ > 0. ? -1 : 1;
       }
       if (((filtered_v_yaw_ > 4.0 && (yaw_subtract_ + filtered_v_yaw_ * (fly_time_[i] + config_.center_delay) -
-                                      1 * 2 * M_PI / armors_num) > 1.1) ||
+                                      1 * 2 * M_PI / armors_num) > 0.7) ||
            (filtered_v_yaw_ < -4.0 && (yaw_subtract_ + filtered_v_yaw_ * (fly_time_[i] + config_.center_delay) +
-                                       1 * 2 * M_PI / armors_num) < -1.1)))
+                                       1 * 2 * M_PI / armors_num) < -0.7)))
       {
         selected_armor_[i] = filtered_v_yaw_ > 0. ? -2 : 2;
       }
       if (((filtered_v_yaw_ > 4.0 && (yaw_subtract_ + filtered_v_yaw_ * (fly_time_[i] + config_.center_delay) -
-                                      2 * 2 * M_PI / armors_num) > 1.1) ||
+                                      2 * 2 * M_PI / armors_num) > 0.7) ||
            (filtered_v_yaw_ < -4.0 && (yaw_subtract_ + filtered_v_yaw_ * (fly_time_[i] + config_.center_delay) +
-                                       2 * 2 * M_PI / armors_num) < -1.1)))
+                                       2 * 2 * M_PI / armors_num) < -0.7)))
       {
         selected_armor_[i] = filtered_v_yaw_ > 0. ? -3 : 3;
       }
@@ -327,9 +328,9 @@ bool BulletSolver::solve(geometry_msgs::Point pos, geometry_msgs::Vector3 vel, d
   {
     r_traject_ = r2;
   }
-  for (int i = 1; i <= 55; i++)
+  for (int i = 1; i <= config_.traject_start_fit_; i++)
   {
-    if (selected_armor_[i] != selected_armor_[0] && using_traject_ == false)
+    if (selected_armor_[i] != selected_armor_[0] && using_traject_ == false && abs(v_yaw) > 2.5)
     {
       start_traject_ = true;
       using_traject_ = true;
@@ -658,6 +659,7 @@ void BulletSolver::reconfigCB(rm_gimbal_controllers::BulletSolverConfig& config,
     config.track_move_target_delay = init_config.track_move_target_delay;
     config.yaw_max_acc = init_config.yaw_max_acc;
     config.min_fit_switch_count = init_config.min_fit_switch_count;
+    config.traject_start_fit_ = init_config.traject_start_fit_;
     config.traject_ahead_ = init_config.traject_ahead_;
     config.clean_shoot_num_ = init_config.clean_shoot_num_;
     config.end_pos_offset = init_config.end_pos_offset;
@@ -681,6 +683,7 @@ void BulletSolver::reconfigCB(rm_gimbal_controllers::BulletSolverConfig& config,
                         .track_move_target_delay = config.track_move_target_delay,
                         .yaw_max_acc = config.yaw_max_acc,
                         .min_fit_switch_count = config.min_fit_switch_count,
+                        .traject_start_fit_ = config.traject_start_fit_,
                         .traject_ahead_ = config.traject_ahead_,
                         .clean_shoot_num_ = config.clean_shoot_num_,
                         .end_pos_offset = config.end_pos_offset,
