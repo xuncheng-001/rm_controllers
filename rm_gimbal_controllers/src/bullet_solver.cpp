@@ -165,8 +165,8 @@ bool BulletSolver::solve(geometry_msgs::Point pos, geometry_msgs::Vector3 vel, d
       yaw_[i] = yaw + filtered_v_yaw_ * (config_.track_rotate_target_delay + i * 0.001);
     else
       yaw_[i] = yaw;
-    pos_x[i] = pos.x + vel.x * (config_.track_move_target_delay + i * 0.005);
-    pos_y[i] = pos.y + vel.y * (config_.track_move_target_delay + i * 0.005);
+    pos_x[i] = pos.x + vel.x * (config_.track_move_target_delay + i * 0.001);
+    pos_y[i] = pos.y + vel.y * (config_.track_move_target_delay + i * 0.001);
     double target_rho = std::sqrt(std::pow(pos_x[i], 2) + std::pow(pos_y[i], 2));
     resistance_coff_ = getResistanceCoefficient(target_rho) != 0 ? getResistanceCoefficient(target_rho) : 0.001;
     double output_yaw_central = std::atan2(pos_y[i], pos_x[i]);
