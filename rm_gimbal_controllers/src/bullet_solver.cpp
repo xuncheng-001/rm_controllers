@@ -330,7 +330,7 @@ bool BulletSolver::solve(geometry_msgs::Point pos, geometry_msgs::Vector3 vel, d
   }
   for (int i = 1; i <= config_.traject_start_fit_; i++)
   {
-    if (selected_armor_[i] != selected_armor_[0] && using_traject_ == false && abs(v_yaw) > 2.5)
+    if (selected_armor_[i] != selected_armor_[0] && using_traject_ == false && abs(v_yaw) > 3.0)
     {
       start_traject_ = true;
       using_traject_ = true;
@@ -413,7 +413,7 @@ bool BulletSolver::solve(geometry_msgs::Point pos, geometry_msgs::Vector3 vel, d
     for (int i = 0; i < 150; ++i)
     {
       bullet_solver_pub->msg_.selected_armor_[i] = static_cast<int16_t>(selected_armor_[i]);
-      bullet_solver_pub->msg_.count_number_[i] = count_[i];
+      bullet_solver_pub->msg_.count_number_[i] = static_cast<int16_t>(count_[i]);
     }
     bullet_solver_pub->msg_.start_vel = stauts_limit_.start_vel;
     bullet_solver_pub->msg_.switchtime = switchtime;

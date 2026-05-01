@@ -113,7 +113,7 @@ public:
   {
     return traject_effort_ff_;
   }
-  bool getTrackTarget()
+  bool getTrackTarget() const
   {
     return track_target_;
   }
@@ -141,14 +141,14 @@ private:
   dynamic_reconfigure::Server<rm_gimbal_controllers::BulletSolverConfig>* d_srv_{};
   Config config_{};
   double yaw_[150], pos_x[150], pos_y[150];
-  double max_track_target_vel_;
+  double max_track_target_vel_{};
   double output_yaw_[150], output_pitch_[150], traject_output_yaw_{};
   double bullet_speed_{}, resistance_coff_{};
   double fly_time_[150];
-  double switch_hysteresis_;
+  double switch_hysteresis_{};
   double last_yaw_{}, filtered_yaw_{};
   double gimbal_switch_duration_{};
-  double yaw_subtract_;
+  double yaw_subtract_{};
   double switch_armor_angle{};
   double filtered_v_yaw_{};
   double switchtime{};
@@ -180,14 +180,14 @@ private:
   geometry_msgs::Point target_pos_[150]{};
   visualization_msgs::Marker marker_desire_;
   visualization_msgs::Marker marker_real_;
-  ros::Time start_using_traject_time;
-  ros::Time ban_shoot_time_;
-  ros::Time last_output_time_;
-  ros::Time ban_shoot_start_time_;
+  ros::Time start_using_traject_time{};
+  ros::Time ban_shoot_time_{};
+  ros::Time last_output_time_{};
+  ros::Time ban_shoot_start_time_{};
 
-  TrajectoryFunctionCoefficients trajectory_function_coefficients;
-  TrajectoryLimitParams stauts_limit_;
+  TrajectoryFunctionCoefficients trajectory_function_coefficients{};
+  TrajectoryLimitParams stauts_limit_{};
 
-  mutable std::mutex heat_mutex_;
+  mutable std::mutex heat_mutex_{};
 };
 }  // namespace rm_gimbal_controllers
