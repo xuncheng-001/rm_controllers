@@ -62,6 +62,7 @@ BulletSolver::BulletSolver(ros::NodeHandle& controller_nh)
     .track_rotate_target_delay = getParam(controller_nh, "track_rotate_target_delay", 0.),
     .track_move_target_delay = getParam(controller_nh, "track_move_target_delay", 0.),
     .yaw_max_acc = getParam(controller_nh, "yaw_max_acc", 60.),
+    .track_rotate_outpost_delay = getParam(controller_nh, "track_rotate_outpost_delay", 0.),
     .min_fit_switch_count = getParam(controller_nh, "min_fit_switch_count", 3),
     .traject_start_fit_ = getParam(controller_nh, "traject_start_fit_", 45),
     .traject_ahead_ = getParam(controller_nh, "traject_ahead_", 1.),
@@ -113,31 +114,35 @@ double BulletSolver::getResistanceCoefficient(double target_distance) const
 {
   // bullet_speed have 5 value:10,15,16,18,30
   double resistance_coff;
-  if (target_distance < 3.3)
-    resistance_coff = config_.resistance_coff_qd_1 + (target_distance - 2.3) +
-                      (config_.resistance_coff_qd_10 - config_.resistance_coff_qd_1);
-  else if (target_distance < 4.3 && target_distance > 3.3)
-    resistance_coff = config_.resistance_coff_qd_10 +
-                      (target_distance - 3.3) * (config_.resistance_coff_qd_15 - config_.resistance_coff_qd_10);
-  else if (target_distance < 5.3)
-    resistance_coff = config_.resistance_coff_qd_15 +
-                      (target_distance - 4.3) * (config_.resistance_coff_qd_16 - config_.resistance_coff_qd_15);
-  else if (target_distance < 6.3)
-    resistance_coff = config_.resistance_coff_qd_16 +
-                      (target_distance - 5.3) * (config_.resistance_coff_qd_18 - config_.resistance_coff_qd_16);
-  else if (target_distance < 7.3)
-    resistance_coff = config_.resistance_coff_qd_18 +
-                      (target_distance - 6.3) * (config_.resistance_coff_qd_30 - config_.resistance_coff_qd_18);
-  else if (target_distance < 8.3)
-    resistance_coff = config_.resistance_coff_qd_30 +
-                      (target_distance - 7.3) * (config_.resistance_coff_qd_800 - config_.resistance_coff_qd_30);
-  else
-    resistance_coff = config_.resistance_coff_qd_800;
+  // if (target_distance < 3.3)
+  //   resistance_coff = config_.resistance_coff_qd_1 + (target_distance - 2.3) +
+  //                     (config_.resistance_coff_qd_10 - config_.resistance_coff_qd_1);
+  // else if (target_distance < 4.3 && target_distance > 3.3)
+  //   resistance_coff = config_.resistance_coff_qd_10 +
+  //                     (target_distance - 3.3) * (config_.resistance_coff_qd_15 - config_.resistance_coff_qd_10);
+  // else if (target_distance < 5.3)
+  //   resistance_coff = config_.resistance_coff_qd_15 +
+  //                     (target_distance - 4.3) * (config_.resistance_coff_qd_16 - config_.resistance_coff_qd_15);
+  // else if (target_distance < 6.3)
+  //   resistance_coff = config_.resistance_coff_qd_16 +
+  //                     (target_distance - 5.3) * (config_.resistance_coff_qd_18 - config_.resistance_coff_qd_16);
+  // else if (target_distance < 7.3)
+  //   resistance_coff = config_.resistance_coff_qd_18 +
+  //                     (target_distance - 6.3) * (config_.resistance_coff_qd_30 - config_.resistance_coff_qd_18);
+  // else if (target_distance < 8.3)
+  //   resistance_coff = config_.resistance_coff_qd_30 +
+  //                     (target_distance - 7.3) * (config_.resistance_coff_qd_800 - config_.resistance_coff_qd_30);
+  // else
+  resistance_coff = config_.resistance_coff_qd_800;
+
+  // hero
+  resistance_coff = config_.resistance_coff_qd_800;
   return resistance_coff;
 }
 
 bool BulletSolver::solve(geometry_msgs::Point pos, geometry_msgs::Vector3 vel, double bullet_speed, double yaw,
-                         double v_yaw, double r1, double r2, double dz, int armors_num, double start_vel)
+                         double v_yaw, double r1, double r2, double dz, int armors_num, double start_vel,
+                         double track_id)
 {
   config_ = *config_rt_buffer_.readFromRT();
   bullet_speed_ = bullet_speed;
@@ -162,7 +167,16 @@ bool BulletSolver::solve(geometry_msgs::Point pos, geometry_msgs::Vector3 vel, d
   {
     double temp_z = pos.z;
     if (track_target_)
-      yaw_[i] = yaw + filtered_v_yaw_ * (config_.track_rotate_target_delay + i * 0.001);
+    {
+      if (track_id == 6)
+      {
+        yaw_[i] = yaw + filtered_v_yaw_ * (config_.track_rotate_outpost_delay + i * 0.001);
+      }
+      else
+      {
+        yaw_[i] = yaw + filtered_v_yaw_ * (config_.track_rotate_target_delay + i * 0.001);
+      }
+    }
     else
       yaw_[i] = yaw;
     pos_x[i] = pos.x + vel.x * (config_.track_move_target_delay + i * 0.001);
@@ -658,6 +672,7 @@ void BulletSolver::reconfigCB(rm_gimbal_controllers::BulletSolverConfig& config,
     config.track_rotate_target_delay = init_config.track_rotate_target_delay;
     config.track_move_target_delay = init_config.track_move_target_delay;
     config.yaw_max_acc = init_config.yaw_max_acc;
+    config.track_rotate_outpost_delay = init_config.track_rotate_outpost_delay;
     config.min_fit_switch_count = init_config.min_fit_switch_count;
     config.traject_start_fit_ = init_config.traject_start_fit_;
     config.traject_ahead_ = init_config.traject_ahead_;
@@ -682,6 +697,7 @@ void BulletSolver::reconfigCB(rm_gimbal_controllers::BulletSolverConfig& config,
                         .track_rotate_target_delay = config.track_rotate_target_delay,
                         .track_move_target_delay = config.track_move_target_delay,
                         .yaw_max_acc = config.yaw_max_acc,
+                        .track_rotate_outpost_delay = config.track_rotate_outpost_delay,
                         .min_fit_switch_count = config.min_fit_switch_count,
                         .traject_start_fit_ = config.traject_start_fit_,
                         .traject_ahead_ = config.traject_ahead_,

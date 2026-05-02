@@ -59,7 +59,8 @@ struct Config
 {
   double resistance_coff_qd_1, resistance_coff_qd_10, resistance_coff_qd_15, resistance_coff_qd_16,
       resistance_coff_qd_18, resistance_coff_qd_30, resistance_coff_qd_800, g, delay, center_delay, max_switch_angle,
-      switch_angle_offset, min_shoot_beforehand_vel, track_rotate_target_delay, track_move_target_delay, yaw_max_acc;
+      switch_angle_offset, min_shoot_beforehand_vel, track_rotate_target_delay, track_move_target_delay, yaw_max_acc,
+      track_rotate_outpost_delay;
   int min_fit_switch_count, traject_start_fit_;
   double traject_ahead_;
   int clean_shoot_num_;
@@ -81,7 +82,7 @@ public:
   explicit BulletSolver(ros::NodeHandle& controller_nh);
 
   bool solve(geometry_msgs::Point pos, geometry_msgs::Vector3 vel, double bullet_speed, double yaw, double v_yaw,
-             double r1, double r2, double dz, int armors_num, double start_vel);
+             double r1, double r2, double dz, int armors_num, double start_vel, double track_id);
   double getGimbalError(geometry_msgs::Point pos, geometry_msgs::Vector3 vel, double yaw, double v_yaw, double r1,
                         double r2, double dz, int armors_num, double yaw_real, double pitch_real, double bullet_speed);
   double getResistanceCoefficient(double target_distance) const;

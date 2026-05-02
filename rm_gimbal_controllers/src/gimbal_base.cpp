@@ -312,7 +312,7 @@ void Controller::track(const ros::Time& time)
   target_vel.z -= chassis_vel_->linear_->z();
   bool solve_success = bullet_solver_->solve(target_pos, target_vel, cmd_gimbal_.bullet_speed, yaw, data_track_.v_yaw,
                                              data_track_.radius_1, data_track_.radius_2, data_track_.dz,
-                                             data_track_.armors_num, gimbal_real_z_vel_);
+                                             data_track_.armors_num, gimbal_real_z_vel_, data_track_.id);
   bullet_solver_->judgeShootBeforehand(time, data_track_.v_yaw);
 
   if (publish_rate_ > 0.0 && last_publish_time_ + ros::Duration(1.0 / publish_rate_) < time)
@@ -531,15 +531,6 @@ void Controller::moveJoint(const ros::Time& time, const ros::Duration& period)
     if (!in_limit.second)
       vel_des[in_limit.first] = 0.;
 
-  // for (auto& td : tracking_differentiator_)
-  // {
-  //   td.second->update(last_pos_des_[td.first] +
-  //                         angles::shortest_angular_distance(last_pos_des_[td.first], pos_des[td.first]),
-  //                     vel_des[td.first],0.5);
-  //   last_pos_des_[td.first] += angles::shortest_angular_distance(last_pos_des_[td.first], pos_des[td.first]);
-  //   pos_des_temp[td.first] = std::remainder(td.second->getX1(), 2 * M_PI);
-  //   angle_error[td.first] = angles::shortest_angular_distance(pos_real[td.first], pos_des_temp[td.first]);
-  // }
   if (pid_pos_.find(1) != pid_pos_.end() && ctrls_.find(1) != ctrls_.end())
   {
     pid_pos_.at(1)->computeCommand(angle_error[1], period);
